@@ -7,6 +7,8 @@ import {
   APIApplicationCommandInteraction,
   APIMessageComponentInteraction,
   InteractionType,
+  ApplicationCommandType,
+  ApplicationCommandOptionType,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
@@ -81,18 +83,44 @@ class QuartzClient {
       }
 
       case InteractionType.ApplicationCommand: {
-        const command = this.commands.find(
-          (c) => interaction.data.name === c.name
-        );
+        switch (interaction.data.type) {
+          case ApplicationCommandType.ChatInput: {
+            const command = this.commands.find(
+              (c) => interaction.data.name === c.name
+            );
 
-        if (!command) {
-          res.statusCode = 400;
-          res.end();
-          return;
+            if (!command) {
+              res.statusCode = 400;
+              res.end();
+              return;
+            }
+
+            const options = Object.fromEntries(
+              interaction.data.options?.map((option) => {
+                if (
+                  option.type !== ApplicationCommandOptionType.Subcommand &&
+                  option.type !== ApplicationCommandOptionType.SubcommandGroup
+                ) {
+                  return [option.name, option.value];
+                } else {
+                  return [option.name, option.options];
+                }
+              }) ?? []
+            );
+
+            command.handler({
+              options,
+            });
+
+            return;
+          }
+          case ApplicationCommandType.Message: {
+            return;
+          }
+          case ApplicationCommandType.User: {
+            return;
+          }
         }
-
-        command?.handler({ options: (interaction.data as any).options });
-        return;
       }
 
       case InteractionType.MessageComponent: {
