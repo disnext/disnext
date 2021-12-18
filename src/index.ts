@@ -85,11 +85,11 @@ class QuartzClient {
           (c) => interaction.data.name === c.name
         );
 
-        // if (!command)
-        // return {
-        //   res.statusCode = 400;
-        //   res.end();
-        // }
+        if (!command) {
+          res.statusCode = 400;
+          res.end();
+          return;
+        }
 
         command?.handler({ options: (interaction.data as any).options });
         return;
