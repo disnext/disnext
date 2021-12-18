@@ -7,23 +7,23 @@ import {
   ChannelType,
 } from "discord-api-types";
 
-export interface BaseCommandOption<T extends true | false> {
+export interface BaseCommandOption<T extends boolean> {
   description: string;
   required?: T;
   type: ApplicationCommandOptionType;
 }
 
 export interface StringCommandOption<
-  T extends Record<string, string>,
-  U extends true | false
+  T extends Record<string, Box<string>> | undefined,
+  U extends boolean
 > extends BaseCommandOption<U> {
   type: ApplicationCommandOptionType.String;
   choices?: T;
 }
 
 export interface IntegerCommandOption<
-  T extends Record<string, number>,
-  U extends true | false
+  T extends Record<string, Box<number>> | undefined,
+  U extends boolean
 > extends BaseCommandOption<U> {
   type: ApplicationCommandOptionType.Integer;
   minValue?: number;
@@ -31,35 +31,35 @@ export interface IntegerCommandOption<
   choices?: T;
 }
 
-export interface BooleanCommandOption<T extends true | false>
+export interface BooleanCommandOption<T extends boolean>
   extends BaseCommandOption<T> {
   type: ApplicationCommandOptionType.Boolean;
 }
 
-export interface UserCommandOption<T extends true | false>
+export interface UserCommandOption<T extends boolean>
   extends BaseCommandOption<T> {
   type: ApplicationCommandOptionType.User;
 }
 
-export interface ChannelCommandOption<T extends true | false>
+export interface ChannelCommandOption<T extends boolean>
   extends BaseCommandOption<T> {
   type: ApplicationCommandOptionType.Channel;
   types?: ChannelType[];
 }
 
-export interface RoleCommandOption<T extends true | false>
+export interface RoleCommandOption<T extends boolean>
   extends BaseCommandOption<T> {
   type: ApplicationCommandOptionType.Role;
 }
 
-export interface MentionableCommandOption<T extends true | false>
+export interface MentionableCommandOption<T extends boolean>
   extends BaseCommandOption<T> {
   type: ApplicationCommandOptionType.Mentionable;
 }
 
 export interface NumberCommandOption<
-  T extends Record<string, number>,
-  U extends true | false
+  T extends Record<string, Box<number>> | undefined,
+  U extends boolean
 > extends BaseCommandOption<U> {
   type: ApplicationCommandOptionType.Number;
   minValue?: number;
@@ -67,7 +67,7 @@ export interface NumberCommandOption<
   choices?: T;
 }
 
-type CommandOption<T extends true | false> =
+type CommandOption<T extends boolean> =
   | StringCommandOption<any, T>
   | IntegerCommandOption<any, T>
   | BooleanCommandOption<T>
@@ -77,7 +77,15 @@ type CommandOption<T extends true | false> =
   | MentionableCommandOption<T>
   | NumberCommandOption<any, T>;
 
-type inferOption<T extends CommandOption<true | false>> =
+type CommandOptionsWithChoices<
+  U extends Record<string, Box<any>>,
+  T extends boolean
+> =
+  | StringCommandOption<U, T>
+  | IntegerCommandOption<U, T>
+  | NumberCommandOption<U, T>;
+
+type inferBaseOption<T extends CommandOption<boolean>> =
   T extends StringCommandOption<any, any>
     ? string
     : T extends IntegerCommandOption<any, any>
@@ -96,31 +104,35 @@ type inferOption<T extends CommandOption<true | false>> =
     ? number
     : never;
 
-type inferRequiredOption<T extends CommandOption<true | false>> =
-  T extends CommandOption<true> ? inferOption<T> : inferOption<T> | undefined;
+type Box<T extends string | number> = { value: T };
+type Unbox<T extends Box<any>> = T["value"];
+export const literal = <T extends string | number>(value: T): Box<T> => ({
+  value,
+});
 
-type ValueOf<T> = T[keyof T];
+type inferRequiredOption<T extends CommandOption<boolean>> =
+  T extends CommandOption<true>
+    ? inferBaseOption<T>
+    : inferBaseOption<T> | undefined;
 
-type inferChoices<T extends CommandOption<true | false>> =
-  T extends StringCommandOption<infer U, any>
-    ? ValueOf<U>
-    : T extends IntegerCommandOption<infer U, any>
-    ? keyof U
-    : T extends NumberCommandOption<infer U, any>
-    ? keyof U
+type inferOption<T extends CommandOption<boolean>> =
+  T extends CommandOptionsWithChoices<infer U, any>
+    ? [U] extends [undefined]
+      ? inferRequiredOption<T>
+      : T extends CommandOption<true>
+      ? Unbox<U[keyof U]>
+      : Unbox<U[keyof U]> | undefined
     : inferRequiredOption<T>;
 
-type inferOptions<T extends Record<string, CommandOption<true | false>>> = {
-  [K in keyof T]: inferChoices<T[K]>;
+type inferOptions<T extends Record<string, CommandOption<boolean>>> = {
+  [K in keyof T]: inferOption<T[K]>;
 };
 
 type inferCommand<T extends Command<any>> = T extends Command<infer U>
   ? inferOptions<U>
   : never;
 
-export interface Command<
-  T extends Record<string, CommandOption<true | false>>
-> {
+export interface Command<T extends Record<string, CommandOption<boolean>>> {
   name: string;
   description: string;
   options?: T;
@@ -128,49 +140,49 @@ export interface Command<
 }
 
 export const options = {
-  string<T extends Record<string, string>, U extends true | false>(
+  string<T extends Record<string, Box<string>> | undefined, U extends boolean>(
     options: Omit<StringCommandOption<T, U>, "type">
   ): StringCommandOption<T, U> {
     return { ...options, type: ApplicationCommandOptionType.String };
   },
-  integer<T extends Record<string, number>, U extends true | false>(
+  integer<T extends Record<string, Box<number>> | undefined, U extends boolean>(
     options: Omit<IntegerCommandOption<T, U>, "type">
   ): IntegerCommandOption<T, U> {
     return { ...options, type: ApplicationCommandOptionType.Integer };
   },
-  boolean<U extends true | false>(
+  boolean<U extends boolean>(
     options: Omit<BooleanCommandOption<U>, "type">
   ): BooleanCommandOption<U> {
     return { ...options, type: ApplicationCommandOptionType.Boolean };
   },
-  user<U extends true | false>(
+  user<U extends boolean>(
     options: Omit<UserCommandOption<U>, "type">
   ): UserCommandOption<U> {
     return { ...options, type: ApplicationCommandOptionType.User };
   },
-  channel<U extends true | false>(
+  channel<U extends boolean>(
     options: Omit<ChannelCommandOption<U>, "type">
   ): ChannelCommandOption<U> {
     return { ...options, type: ApplicationCommandOptionType.Channel };
   },
-  role<U extends true | false>(
+  role<U extends boolean>(
     options: Omit<RoleCommandOption<U>, "type">
   ): RoleCommandOption<U> {
     return { ...options, type: ApplicationCommandOptionType.Role };
   },
-  mentionable<U extends true | false>(
+  mentionable<U extends boolean>(
     options: Omit<MentionableCommandOption<U>, "type">
   ): MentionableCommandOption<U> {
     return { ...options, type: ApplicationCommandOptionType.Mentionable };
   },
-  number<T extends Record<string, number>, U extends true | false>(
+  number<T extends Record<string, Box<number>> | undefined, U extends boolean>(
     options: Omit<NumberCommandOption<T, U>, "type">
   ): NumberCommandOption<T, U> {
     return { ...options, type: ApplicationCommandOptionType.Number };
   },
 };
 
-export const command = <T extends Record<string, CommandOption<true | false>>>(
+export const command = <T extends Record<string, CommandOption<boolean>>>(
   options: Command<T>
 ): Command<T> => {
   return options;
@@ -184,7 +196,7 @@ const a = command({
       description: "UwU Me!",
       required: true,
       choices: {
-        owo: "uwu",
+        owo: literal("uwu"),
       },
     }),
     cost: options.number({
