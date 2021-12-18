@@ -1,6 +1,7 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import nacl from "tweetnacl";
 import { Readable } from "stream";
+import { Command, CommandOption } from "./commands";
 
 const streamToString = async (stream: Readable) => {
   const chunks = [];
@@ -16,6 +17,7 @@ class QuartzClient {
   private applicationID: string;
   private publicKey: string;
   private token: string;
+  private commands: Command<any>[] = [];
 
   constructor({
     applicationID,
@@ -64,7 +66,11 @@ class QuartzClient {
   //
   //   }
 
-  command(options: Command) {}
+  command<T extends Record<string, CommandOption<boolean>>>(
+    options: Command<T>
+  ) {
+    this.commands.push(options);
+  }
 }
 
 export default QuartzClient;

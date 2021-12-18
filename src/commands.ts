@@ -2,7 +2,6 @@ import {
   APIChannel,
   APIGuildMember,
   APIRole,
-  APIUser,
   ApplicationCommandOptionType,
   ChannelType,
 } from "discord-api-types";
@@ -67,7 +66,7 @@ export interface NumberCommandOption<
   choices?: T;
 }
 
-type CommandOption<T extends boolean> =
+export type CommandOption<T extends boolean> =
   | StringCommandOption<any, T>
   | IntegerCommandOption<any, T>
   | BooleanCommandOption<T>
@@ -77,7 +76,7 @@ type CommandOption<T extends boolean> =
   | MentionableCommandOption<T>
   | NumberCommandOption<any, T>;
 
-type CommandOptionsWithChoices<
+export type CommandOptionsWithChoices<
   U extends Record<string, Box<any>>,
   T extends boolean
 > =
@@ -85,7 +84,7 @@ type CommandOptionsWithChoices<
   | IntegerCommandOption<U, T>
   | NumberCommandOption<U, T>;
 
-type inferBaseOption<T extends CommandOption<boolean>> =
+export type inferBaseOption<T extends CommandOption<boolean>> =
   T extends StringCommandOption<any, any>
     ? string
     : T extends IntegerCommandOption<any, any>
@@ -104,18 +103,18 @@ type inferBaseOption<T extends CommandOption<boolean>> =
     ? number
     : never;
 
-type Box<T extends string | number> = { value: T };
-type Unbox<T extends Box<any>> = T["value"];
+export type Box<T extends string | number> = { value: T };
+export type Unbox<T extends Box<any>> = T["value"];
 export const literal = <T extends string | number>(value: T): Box<T> => ({
   value,
 });
 
-type inferRequiredOption<T extends CommandOption<boolean>> =
+export type inferRequiredOption<T extends CommandOption<boolean>> =
   T extends CommandOption<true>
     ? inferBaseOption<T>
     : inferBaseOption<T> | undefined;
 
-type inferOption<T extends CommandOption<boolean>> =
+export type inferOption<T extends CommandOption<boolean>> =
   T extends CommandOptionsWithChoices<infer U, any>
     ? [U] extends [undefined]
       ? inferRequiredOption<T>
@@ -124,14 +123,9 @@ type inferOption<T extends CommandOption<boolean>> =
       : Unbox<U[keyof U]> | undefined
     : inferRequiredOption<T>;
 
-type inferOptions<T extends Record<string, CommandOption<boolean>>> = {
+export type inferOptions<T extends Record<string, CommandOption<boolean>>> = {
   [K in keyof T]: inferOption<T[K]>;
 };
-
-type inferCommand<T extends Command<any>> = T extends Command<infer U>
-  ? inferOptions<U>
-  : never;
-
 export interface Command<T extends Record<string, CommandOption<boolean>>> {
   name: string;
   description: string;
@@ -181,36 +175,3 @@ export const options = {
     return { ...options, type: ApplicationCommandOptionType.Number };
   },
 };
-
-export const command = <T extends Record<string, CommandOption<boolean>>>(
-  options: Command<T>
-): Command<T> => {
-  return options;
-};
-
-const a = command({
-  name: "owo",
-  description: "UwU",
-  options: {
-    name: options.string({
-      description: "UwU Me!",
-      required: true,
-      choices: {
-        owo: literal("uwu"),
-      },
-    }),
-    cost: options.number({
-      description: "cost of u",
-      required: true,
-    }),
-    user: options.user({
-      description: "ur mom",
-      required: false,
-    }),
-  },
-  handler: (ctx) => {
-    ctx.options.user;
-  },
-});
-
-type owo = inferCommand<typeof a>;
