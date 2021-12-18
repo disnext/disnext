@@ -1,7 +1,7 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import nacl from "tweetnacl";
 import { Readable } from "stream";
-import { Command, CommandOption } from "./commands";
+import { Command, CommandOption, SendOptions } from "./commands";
 import {
   APIPingInteraction,
   APIApplicationCommandInteraction,
@@ -9,9 +9,20 @@ import {
   InteractionType,
   ApplicationCommandType,
   ApplicationCommandOptionType,
+  APIChannel,
+  APIGuild,
+  InteractionResponseType,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
+import axios from "axios";
+
+const DiscordAPI = axios.create({
+  baseURL: "https://discord.com/api/v9",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 const streamToString = async (stream: Readable) => {
   const chunks = [];
@@ -41,9 +52,10 @@ class QuartzClient {
     this.applicationID = applicationID;
     this.publicKey = publicKey;
     this.token = token;
+    this.handle = this.handle.bind(this);
   }
 
-  async handle(req: IncomingMessage, res: ServerResponse) {
+  private async handle(req: IncomingMessage, res: ServerResponse) {
     const signature = req.headers["x-signature-ed25519"] as string | undefined;
     const timestamp = req.headers["x-signature-timestamp"] as
       | string
@@ -78,6 +90,7 @@ class QuartzClient {
     switch (interaction.type) {
       case InteractionType.Ping: {
         res.statusCode = 200;
+        res.setHeader("content-type", "application/json");
         res.end(JSON.stringify({ type: InteractionType.Ping }));
         return;
       }
@@ -85,6 +98,8 @@ class QuartzClient {
       case InteractionType.ApplicationCommand: {
         switch (interaction.data.type) {
           case ApplicationCommandType.ChatInput: {
+            const resolved = interaction.data.resolved;
+
             const command = this.commands.find(
               (c) => interaction.data.name === c.name
             );
@@ -101,6 +116,40 @@ class QuartzClient {
                   option.type !== ApplicationCommandOptionType.Subcommand &&
                   option.type !== ApplicationCommandOptionType.SubcommandGroup
                 ) {
+                  if (option.type === ApplicationCommandOptionType.User) {
+                    const member = resolved?.members?.[option.value];
+                    const user = resolved?.users?.[option.value];
+                    if (!member || !user)
+                      throw new Error("Unable to resolve member");
+                    return [option.name, { ...member, user }];
+                  } else if (
+                    option.type === ApplicationCommandOptionType.Role
+                  ) {
+                    const role = resolved?.roles?.[option.value];
+                    if (!role) throw new Error("Unable to resolve role");
+                    return [option.name, role];
+                  } else if (
+                    option.type === ApplicationCommandOptionType.Channel
+                  ) {
+                    const channel = resolved?.channels?.[option.value];
+                    if (!channel) throw new Error("Unable to resolve channel");
+                    return [option.name, channel];
+                  } else if (
+                    option.type === ApplicationCommandOptionType.Mentionable
+                  ) {
+                    const mentionable =
+                      resolved?.members?.[option.value] ??
+                      resolved?.roles?.[option.value];
+                    const user = resolved?.users?.[option.value];
+                    if (!mentionable)
+                      throw new Error("Unable to resolve mentionable");
+                    return [
+                      option.name,
+                      resolved?.members?.[option.value]
+                        ? { ...mentionable, user }
+                        : mentionable,
+                    ];
+                  }
                   return [option.name, option.value];
                 } else {
                   return [option.name, option.options];
@@ -109,6 +158,57 @@ class QuartzClient {
             );
 
             command.handler({
+              user: interaction.user,
+              member: interaction.member,
+              channelID: interaction.channel_id,
+              guildID: interaction.guild_id,
+              channel: async () =>
+                (
+                  await DiscordAPI.get<APIChannel>(
+                    `/channels/${interaction.channel_id}`,
+                    {
+                      headers: {
+                        Authorization: `Bot ${this.token}`,
+                      },
+                    }
+                  )
+                ).data,
+              guild: async () =>
+                interaction.guild_id
+                  ? (
+                      await DiscordAPI.get<APIGuild>(
+                        `/guilds/${interaction.guild_id}`,
+                        {
+                          headers: {
+                            Authorization: `Bot ${this.token}`,
+                          },
+                        }
+                      )
+                    ).data
+                  : undefined,
+              send: ({ allowedMentions, ephemeral, ...rest }: SendOptions) => {
+                res.statusCode = 200;
+                res.setHeader("content-type", "application/json");
+                res.end(
+                  JSON.stringify({
+                    type: InteractionResponseType.ChannelMessageWithSource,
+                    data: {
+                      content: "content" in rest ? rest.content : undefined,
+                      embeds: "embeds" in rest ? rest.embeds : undefined,
+                      allowed_mentions: allowedMentions,
+                      flags: ephemeral ? 1 << 6 : undefined,
+                    },
+                  })
+                );
+              },
+              defer: () => {
+                res.statusCode = 200;
+                res.setHeader("content-type", "application/json");
+                res.end({
+                  type: InteractionResponseType.DeferredChannelMessageWithSource,
+                });
+                return;
+              },
               options,
             });
 
@@ -133,7 +233,7 @@ class QuartzClient {
     }
   }
 
-  listen(port: number, address: string) {
+  listen(port: number = 3000, address: string = "localhost") {
     http.createServer(this.handle).listen(port, address);
   }
 

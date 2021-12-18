@@ -2,7 +2,7 @@
   "name": "quartz-reborn",
   "version": "4.0.0",
   "description": "Quartz, reborn.",
-  "main": "lib/index,js",
+  "main": "lib/index.js",
   "repository": "https://github.com/pointscity/quartz",
   "author": "Innatical LLC",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "typescript": "^4.5.4"
   },
   "dependencies": {
+    "axios": "^0.24.0",
     "discord-api-types": "^0.25.2",
     "fastify": "^3.25.0",
     "hcl2-parser": "^1.0.3",

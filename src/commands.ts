@@ -4,6 +4,13 @@ import {
   APIRole,
   ApplicationCommandOptionType,
   ChannelType,
+  APIInteractionDataResolvedGuildMember,
+  APIUser,
+  APIInteractionDataResolvedChannel,
+  APIInteractionGuildMember,
+  APIGuild,
+  APIEmbed,
+  AllowedMentionsTypes,
 } from "discord-api-types";
 
 export interface BaseCommandOption<T extends boolean> {
@@ -92,13 +99,13 @@ export type inferBaseOption<T extends CommandOption<boolean>> =
     : T extends BooleanCommandOption<any>
     ? boolean
     : T extends UserCommandOption<any>
-    ? APIGuildMember
+    ? APIInteractionDataResolvedGuildMember & { user: APIUser }
     : T extends ChannelCommandOption<any>
-    ? APIChannel
+    ? APIInteractionDataResolvedChannel
     : T extends RoleCommandOption<any>
     ? APIRole
     : T extends MentionableCommandOption<any>
-    ? APIGuildMember | APIRole
+    ? (APIInteractionDataResolvedGuildMember & { user: APIUser }) | APIRole
     : T extends NumberCommandOption<any, any>
     ? number
     : never;
@@ -130,13 +137,40 @@ export type inferOptions<
       [K in keyof T]: inferOption<T[K]>;
     }
   : undefined;
+
+export interface BaseSendOptions {
+  allowedMentions?: AllowedMentionsTypes;
+  ephemeral?: boolean;
+}
+
+export type SendOptions = BaseSendOptions &
+  (
+    | {
+        content: string;
+      }
+    | { embeds: [APIEmbed, ...APIEmbed[]] }
+    | ({
+        content: string;
+      } & { embeds: [APIEmbed, ...APIEmbed[]] })
+  );
+
 export interface Command<
   T extends Record<string, CommandOption<boolean>> | undefined
 > {
   name: string;
   description: string;
   options?: T;
-  handler: (ctx: { options: inferOptions<T> }) => void;
+  handler: (ctx: {
+    options: inferOptions<T>;
+    channelID: string;
+    guildID?: string;
+    channel: () => Promise<APIChannel>;
+    guild: () => Promise<APIGuild | undefined>;
+    user?: APIUser;
+    member?: APIInteractionGuildMember;
+    send(options: SendOptions): void;
+    defer(ephemeral?: boolean): void;
+  }) => void;
 }
 
 export const options = {
