@@ -2,6 +2,14 @@ import http, { IncomingMessage, ServerResponse } from "http";
 import nacl from "tweetnacl";
 import { Readable } from "stream";
 import { Command, CommandOption } from "./commands";
+import {
+  APIPingInteraction,
+  APIApplicationCommandInteraction,
+  APIMessageComponentInteraction,
+  InteractionType,
+} from "discord-api-types";
+
+import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
 
 const streamToString = async (stream: Readable) => {
   const chunks = [];
@@ -45,8 +53,10 @@ class QuartzClient {
       return;
     }
 
+    const data = await streamToString(req);
+
     const isVerified = nacl.sign.detached.verify(
-      Buffer.from(timestamp + (await streamToString(req))),
+      Buffer.from(timestamp + data),
       Buffer.from(signature, "hex"),
       Buffer.from(this.publicKey, "hex")
     );
@@ -55,6 +65,43 @@ class QuartzClient {
       res.statusCode = 401;
       res.end();
       return;
+    }
+
+    const interaction = JSON.parse(data) as
+      | APIPingInteraction
+      | APIApplicationCommandInteraction
+      | APIMessageComponentInteraction
+      | APIApplicationCommandAutocompleteInteraction;
+
+    switch (interaction.type) {
+      case InteractionType.Ping: {
+        res.statusCode = 200;
+        res.end(JSON.stringify({ type: InteractionType.Ping }));
+        return;
+      }
+
+      case InteractionType.ApplicationCommand: {
+        const command = this.commands.find(
+          (c) => interaction.data.name === c.name
+        );
+
+        // if (!command)
+        // return {
+        //   res.statusCode = 400;
+        //   res.end();
+        // }
+
+        command?.handler({ options: (interaction.data as any).options });
+        return;
+      }
+
+      case InteractionType.MessageComponent: {
+        return;
+      }
+
+      case InteractionType.ApplicationCommandAutocomplete: {
+        return;
+      }
     }
   }
 
@@ -66,7 +113,7 @@ class QuartzClient {
   //
   //   }
 
-  command<T extends Record<string, CommandOption<boolean>>>(
+  command<T extends Record<string, CommandOption<boolean>> | undefined>(
     options: Command<T>
   ) {
     this.commands.push(options);

@@ -123,10 +123,16 @@ export type inferOption<T extends CommandOption<boolean>> =
       : Unbox<U[keyof U]> | undefined
     : inferRequiredOption<T>;
 
-export type inferOptions<T extends Record<string, CommandOption<boolean>>> = {
-  [K in keyof T]: inferOption<T[K]>;
-};
-export interface Command<T extends Record<string, CommandOption<boolean>>> {
+export type inferOptions<
+  T extends Record<string, CommandOption<boolean>> | undefined
+> = [T] extends [Record<string, CommandOption<boolean>>]
+  ? {
+      [K in keyof T]: inferOption<T[K]>;
+    }
+  : undefined;
+export interface Command<
+  T extends Record<string, CommandOption<boolean>> | undefined
+> {
   name: string;
   description: string;
   options?: T;
