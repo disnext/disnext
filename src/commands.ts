@@ -165,6 +165,7 @@ export interface Command<
   name: string;
   description: string;
   options?: T;
+  defaultPermission?: boolean;
   handler: (ctx: {
     options: inferOptions<T>;
     channelID: string;

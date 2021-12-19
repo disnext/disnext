@@ -13,6 +13,11 @@ import {
   APIGuild,
   InteractionResponseType,
   APIMessage,
+  RESTPostAPIChatInputApplicationCommandsJSONBody,
+  APIApplicationCommandChannelOptions,
+  APIApplicationCommandNumberArgumentOptions,
+  APIApplicationCommandStringArgumentOptions,
+  APIApplicationCommandSubCommandOptions,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
@@ -308,20 +313,32 @@ class QuartzClient {
     http.createServer(this.handle).listen(port, address);
   }
 
-  //   middleware({}) {
-  //
-  //   }
-
   command<T extends Record<string, CommandOption<boolean>> | undefined>(
     options: Command<T>
   ) {
     this.commands.push(options);
   }
+
+  generateCommands(): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
+    return this.commands.map((command) => ({
+      name: command.name,
+      description: command.description,
+      options: Object.entries(command.options ?? {}).map(
+        ([name, value]: [string, any]) => ({
+          type: value.type,
+          name,
+          description: value.description,
+          required: value.required,
+          choices: "choices" in value ? value.choices : undefined,
+          channel_types: "types" in value ? value.types : undefined,
+          min_value: "minValue" in value ? value.minValue : undefined,
+          max_value: "maxValue" in value ? value.maxValue : undefined,
+        })
+      ) as any,
+      default_permission: command.defaultPermission,
+      type: ApplicationCommandType.ChatInput,
+    }));
+  }
 }
 
 export default QuartzClient;
-
-// PORT
-// DISCORD TOKEN
-// DISCORD APPLICATION ID
-// DISCORD PUBLIC KEY
