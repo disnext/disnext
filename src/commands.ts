@@ -1,6 +1,5 @@
 import {
   APIChannel,
-  APIGuildMember,
   APIRole,
   ApplicationCommandOptionType,
   ChannelType,
@@ -11,6 +10,7 @@ import {
   APIGuild,
   APIEmbed,
   AllowedMentionsTypes,
+  APIMessage,
 } from "discord-api-types";
 
 export interface BaseCommandOption<T extends boolean> {
@@ -140,7 +140,6 @@ export type inferOptions<
 
 export interface BaseSendOptions {
   allowedMentions?: AllowedMentionsTypes;
-  ephemeral?: boolean;
 }
 
 export type SendOptions = BaseSendOptions &
@@ -153,6 +152,12 @@ export type SendOptions = BaseSendOptions &
         content: string;
       } & { embeds: [APIEmbed, ...APIEmbed[]] })
   );
+
+export interface FollowUp {
+  send(options: SendOptions & { ephemeral?: boolean }): Promise<APIMessage>;
+  edit(options: SendOptions, messageID?: string): Promise<APIMessage>;
+  delete(messageID?: string): Promise<void>;
+}
 
 export interface Command<
   T extends Record<string, CommandOption<boolean>> | undefined
@@ -168,8 +173,8 @@ export interface Command<
     guild: () => Promise<APIGuild | undefined>;
     user?: APIUser;
     member?: APIInteractionGuildMember;
-    send(options: SendOptions): void;
-    defer(ephemeral?: boolean): void;
+    send(options: SendOptions): FollowUp;
+    defer(ephemeral?: boolean): FollowUp;
   }) => void;
 }
 

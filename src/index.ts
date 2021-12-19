@@ -1,7 +1,7 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import nacl from "tweetnacl";
 import { Readable } from "stream";
-import { Command, CommandOption, SendOptions } from "./commands";
+import { Command, CommandOption, FollowUp, SendOptions } from "./commands";
 import {
   APIPingInteraction,
   APIApplicationCommandInteraction,
@@ -12,6 +12,7 @@ import {
   APIChannel,
   APIGuild,
   InteractionResponseType,
+  APIMessage,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
@@ -157,6 +158,65 @@ class QuartzClient {
               }) ?? []
             );
 
+            let sent = false;
+
+            const followUp: FollowUp = {
+              send: async ({
+                allowedMentions,
+                ephemeral,
+                ...rest
+              }: SendOptions & { ephemeral?: boolean }) =>
+                (
+                  await DiscordAPI.post<APIMessage>(
+                    `/webhooks/${this.applicationID}/${interaction.token}`,
+                    {
+                      content: "content" in rest ? rest.content : undefined,
+                      embeds: "embeds" in rest ? rest.embeds : undefined,
+                      allowed_mentions: allowedMentions,
+                      flags: ephemeral ? 1 << 6 : undefined,
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bot ${this.token}`,
+                      },
+                    }
+                  )
+                ).data,
+              delete: async (messageID?: string) => {
+                await DiscordAPI.delete(
+                  `/webhooks/${this.applicationID}/${
+                    interaction.token
+                  }/messages/${messageID ?? "@original"}`,
+                  {
+                    headers: {
+                      Authorization: `Bot ${this.token}`,
+                    },
+                  }
+                );
+              },
+              edit: async (
+                { allowedMentions, ...rest }: SendOptions,
+                messageID?: string
+              ) =>
+                (
+                  await DiscordAPI.patch<APIMessage>(
+                    `/webhooks/${this.applicationID}/${
+                      interaction.token
+                    }/messages/${messageID ?? "@original"}`,
+                    {
+                      content: "content" in rest ? rest.content : undefined,
+                      embeds: "embeds" in rest ? rest.embeds : undefined,
+                      allowed_mentions: allowedMentions,
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bot ${this.token}`,
+                      },
+                    }
+                  )
+                ).data,
+            };
+
             command.handler({
               user: interaction.user,
               member: interaction.member,
@@ -186,7 +246,13 @@ class QuartzClient {
                       )
                     ).data
                   : undefined,
-              send: ({ allowedMentions, ephemeral, ...rest }: SendOptions) => {
+              send: ({
+                allowedMentions,
+                ephemeral,
+                ...rest
+              }: SendOptions & { ephemeral?: boolean }) => {
+                if (!sent)
+                  throw new Error("Cannot defer when response is already sent");
                 res.statusCode = 200;
                 res.setHeader("content-type", "application/json");
                 res.end(
@@ -200,14 +266,19 @@ class QuartzClient {
                     },
                   })
                 );
+                sent = true;
+                return followUp;
               },
               defer: () => {
+                if (!sent)
+                  throw new Error("Cannot defer when response is already sent");
                 res.statusCode = 200;
                 res.setHeader("content-type", "application/json");
                 res.end({
                   type: InteractionResponseType.DeferredChannelMessageWithSource,
                 });
-                return;
+                sent = true;
+                return followUp;
               },
               options,
             });
