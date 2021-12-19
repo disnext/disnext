@@ -4,9 +4,7 @@ import { Readable } from "stream";
 import {
   Command,
   CommandOption,
-  constructMiddleware,
   FollowUp,
-  inferMiddlewareContextType,
   inferMiddlewareContextTypes,
   MiddlewareFunction,
   SendOptions,
@@ -26,24 +24,8 @@ import {
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
-import axios from "axios";
-
-const DiscordAPI = axios.create({
-  baseURL: "https://discord.com/api/v9",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-const streamToString = async (stream: Readable) => {
-  const chunks = [];
-
-  for await (const chunk of stream) {
-    chunks.push(Buffer.from(chunk));
-  }
-
-  return Buffer.concat(chunks).toString("utf-8");
-};
+import { DiscordAPI, streamToString } from "./util";
+import Guild from "./structures/Guild";
 
 class QuartzClient {
   applicationID: string;
@@ -248,19 +230,21 @@ class QuartzClient {
                     }
                   )
                 ).data,
-              guild: async () =>
-                interaction.guild_id
-                  ? (
-                      await DiscordAPI.get<APIGuild>(
-                        `/guilds/${interaction.guild_id}`,
-                        {
-                          headers: {
-                            Authorization: `Bot ${this.token}`,
-                          },
-                        }
-                      )
-                    ).data
-                  : undefined,
+              guild: async () => {
+                if (!interaction.guild_id) return;
+                const rawGuild = (
+                  await DiscordAPI.get<APIGuild>(
+                    `/guilds/${interaction.guild_id}`,
+                    {
+                      headers: {
+                        Authorization: `Bot ${this.token}`,
+                      },
+                    }
+                  )
+                ).data;
+                if (!rawGuild) return;
+                return new Guild(rawGuild, this.token);
+              },
               send: ({
                 allowedMentions,
                 ephemeral,

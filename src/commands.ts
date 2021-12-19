@@ -12,6 +12,7 @@ import {
   AllowedMentionsTypes,
   APIMessage,
 } from "discord-api-types";
+import Guild from "./structures/Guild";
 
 export interface BaseCommandOption<T extends boolean> {
   description: string;
@@ -169,7 +170,7 @@ export interface HandlerContext<
   channelID: string;
   guildID?: string;
   channel: () => Promise<APIChannel>;
-  guild: () => Promise<APIGuild | undefined>;
+  guild: () => Promise<Guild | undefined>;
   user?: APIUser;
   member?: APIInteractionGuildMember;
   send(options: SendOptions & { ephemeral?: boolean }): FollowUp;
