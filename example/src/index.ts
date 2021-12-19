@@ -1,11 +1,18 @@
 import "dotenv/config";
 import { options } from "../../src/commands";
-import QuartzClient from "../../src/index";
+import QuartzClient, { inferMiddlewareContextTypes } from "../../src/index";
 
-const client = new QuartzClient({
+const client: QuartzClient = new QuartzClient({
   applicationID: process.env.DISCORD_APPLICATION_ID!,
   publicKey: process.env.DISCORD_PUBLIC_KEY!,
   token: process.env.DISCORD_TOKEN!,
+});
+
+client.middleware(async (ctx) => {
+  return {
+    next: true,
+    ctx: { owo: true },
+  };
 });
 
 client.command({

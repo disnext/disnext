@@ -159,25 +159,56 @@ export interface FollowUp {
   delete(messageID?: string): Promise<void>;
 }
 
+export interface HandlerContext<
+  T extends Record<string, CommandOption<boolean>> | undefined,
+  U extends object
+> {
+  name: string;
+  context: U;
+  options: inferOptions<T>;
+  channelID: string;
+  guildID?: string;
+  channel: () => Promise<APIChannel>;
+  guild: () => Promise<APIGuild | undefined>;
+  user?: APIUser;
+  member?: APIInteractionGuildMember;
+  send(options: SendOptions & { ephemeral?: boolean }): FollowUp;
+  defer(ephemeral?: boolean): FollowUp;
+}
+
+export type MiddlewareResponse<T extends object> =
+  | {
+      next: true;
+      ctx: T;
+    }
+  | {
+      next: false;
+    };
+
+export type MiddlewareFunction<T extends object, U extends object> = (
+  ctx: HandlerContext<undefined, T>
+) => Promise<MiddlewareResponse<U>>;
+
+export type inferMiddlewareContextType<T extends MiddlewareFunction<any, any>> =
+  T extends MiddlewareFunction<any, infer U> ? U : {};
+
+export type inferMiddlewareContextTypes<
+  T extends MiddlewareFunction<any, any>[]
+> = inferMiddlewareContextType<T[number]>;
 export interface Command<
-  T extends Record<string, CommandOption<boolean>> | undefined
+  T extends Record<string, CommandOption<boolean>> | undefined,
+  U extends object
 > {
   name: string;
   description: string;
   options?: T;
   defaultPermission?: boolean;
-  handler: (ctx: {
-    options: inferOptions<T>;
-    channelID: string;
-    guildID?: string;
-    channel: () => Promise<APIChannel>;
-    guild: () => Promise<APIGuild | undefined>;
-    user?: APIUser;
-    member?: APIInteractionGuildMember;
-    send(options: SendOptions): FollowUp;
-    defer(ephemeral?: boolean): FollowUp;
-  }) => void;
+  handler: (ctx: HandlerContext<T, U>) => void;
 }
+
+export type constructMiddleware<T extends MiddlewareFunction<any, any>[]> = {
+  middlewares: T;
+};
 
 export const options = {
   string<T extends Record<string, Box<string>> | undefined, U extends boolean>(

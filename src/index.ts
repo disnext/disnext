@@ -1,7 +1,16 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import nacl from "tweetnacl";
 import { Readable } from "stream";
-import { Command, CommandOption, FollowUp, SendOptions } from "./commands";
+import {
+  Command,
+  CommandOption,
+  constructMiddleware,
+  FollowUp,
+  inferMiddlewareContextType,
+  inferMiddlewareContextTypes,
+  MiddlewareFunction,
+  SendOptions,
+} from "./commands";
 import {
   APIPingInteraction,
   APIApplicationCommandInteraction,
@@ -14,10 +23,6 @@ import {
   InteractionResponseType,
   APIMessage,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
-  APIApplicationCommandChannelOptions,
-  APIApplicationCommandNumberArgumentOptions,
-  APIApplicationCommandStringArgumentOptions,
-  APIApplicationCommandSubCommandOptions,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
@@ -41,10 +46,14 @@ const streamToString = async (stream: Readable) => {
 };
 
 class QuartzClient {
-  private applicationID: string;
-  private publicKey: string;
-  private token: string;
-  private commands: Command<any>[] = [];
+  applicationID: string;
+  publicKey: string;
+  token: string;
+  middlewares: MiddlewareFunction<any, any>[] = [];
+  private commands: Command<
+    any,
+    inferMiddlewareContextTypes<typeof this.middlewares>
+  >[] = [];
 
   constructor({
     applicationID,
@@ -222,11 +231,12 @@ class QuartzClient {
                 ).data,
             };
 
-            command.handler({
+            const handlerContext = {
               user: interaction.user,
               member: interaction.member,
               channelID: interaction.channel_id,
               guildID: interaction.guild_id,
+              name: interaction.data.name,
               channel: async () =>
                 (
                   await DiscordAPI.get<APIChannel>(
@@ -286,7 +296,18 @@ class QuartzClient {
                 return followUp;
               },
               options,
-            });
+              context: {},
+            };
+
+            for (const middleware of this.middlewares) {
+              const res = await middleware(handlerContext);
+              if (!res.next) {
+                return;
+              }
+              handlerContext.context = res.ctx;
+            }
+
+            command.handler(handlerContext);
 
             return;
           }
@@ -314,9 +335,19 @@ class QuartzClient {
   }
 
   command<T extends Record<string, CommandOption<boolean>> | undefined>(
-    options: Command<T>
+    options: Command<T, inferMiddlewareContextTypes<this["middlewares"]>>
   ) {
     this.commands.push(options);
+  }
+
+  middleware<T extends object>(
+    this: this,
+    middleware: MiddlewareFunction<
+      inferMiddlewareContextTypes<this["middlewares"]>,
+      T
+    >
+  ): asserts this is this & { middlewares: typeof middleware[] } {
+    this.middlewares.push(middleware);
   }
 
   generateCommands(): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
@@ -366,3 +397,5 @@ class QuartzClient {
 }
 
 export default QuartzClient;
+
+export * from "./commands";
