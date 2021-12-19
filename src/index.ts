@@ -339,6 +339,30 @@ class QuartzClient {
       type: ApplicationCommandType.ChatInput,
     }));
   }
+
+  async overwriteCommands() {
+    await DiscordAPI.post(
+      `/applications/${this.applicationID}/commands`,
+      this.generateCommands(),
+      {
+        headers: {
+          Authorization: `Bot ${this.token}`,
+        },
+      }
+    );
+  }
+
+  async overwriteGuildCommands(guildID: string) {
+    await DiscordAPI.post(
+      `/applications/${this.applicationID}/guilds/${guildID}/commands`,
+      this.generateCommands(),
+      {
+        headers: {
+          Authorization: `Bot ${this.token}`,
+        },
+      }
+    );
+  }
 }
 
 export default QuartzClient;
