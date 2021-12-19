@@ -17,6 +17,14 @@ class Guild {
     return this.#guild.name;
   }
 
+  get icon() {
+    return this.#guild.icon;
+  }
+
+  get iconHash() {
+    return this.#guild.icon_hash;
+  }
+
   get ownerID() {
     return this.#guild.owner_id;
   }
