@@ -266,7 +266,7 @@ class QuartzClient {
                 ephemeral,
                 ...rest
               }: SendOptions & { ephemeral?: boolean }) => {
-                if (!sent)
+                if (sent)
                   throw new Error("Cannot defer when response is already sent");
                 res.statusCode = 200;
                 res.setHeader("content-type", "application/json");
@@ -285,7 +285,7 @@ class QuartzClient {
                 return followUp;
               },
               defer: () => {
-                if (!sent)
+                if (sent)
                   throw new Error("Cannot defer when response is already sent");
                 res.statusCode = 200;
                 res.setHeader("content-type", "application/json");

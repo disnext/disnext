@@ -1,5 +1,5 @@
 {
-  "name": "quartz-reborn",
+  "name": "@points.city/quartz",
   "version": "4.0.0",
   "description": "Quartz, reborn.",
   "main": "lib/index.js",
