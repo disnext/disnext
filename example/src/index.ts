@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { options } from "../../src/commands";
-import QuartzClient, { inferMiddlewareContextTypes } from "../../src/index";
+import QuartzClient, { options } from "@points.city/quartz";
 
 const client: QuartzClient = new QuartzClient({
   applicationID: process.env.DISCORD_APPLICATION_ID!,

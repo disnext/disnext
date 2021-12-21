@@ -33,7 +33,7 @@ class QuartzClient {
   token: string;
   middlewares: MiddlewareFunction<any, any>[] = [];
   private commands: Command<
-    any,
+    Record<string, CommandOption<any>>,
     inferMiddlewareContextTypes<typeof this.middlewares>
   >[] = [];
 
@@ -315,13 +315,20 @@ class QuartzClient {
   }
 
   listen(port: number = 3000, address: string = "localhost") {
+    if (
+      process.argv[1] === "push" ||
+      (!!process.argv[2] && process.argv[2] === "push")
+    ) {
+      import("./cli").then((cli) => cli.loadCli(this));
+      return;
+    }
     http.createServer(this.handle).listen(port, address);
   }
 
   command<T extends Record<string, CommandOption<boolean>> | undefined>(
     options: Command<T, inferMiddlewareContextTypes<this["middlewares"]>>
   ) {
-    this.commands.push(options);
+    this.commands.push(options as any);
   }
 
   middleware<T extends object>(
@@ -338,25 +345,23 @@ class QuartzClient {
     return this.commands.map((command) => ({
       name: command.name,
       description: command.description,
-      options: Object.entries(command.options ?? {}).map(
-        ([name, value]: [string, any]) => ({
-          type: value.type,
-          name,
-          description: value.description,
-          required: value.required,
-          choices: "choices" in value ? value.choices : undefined,
-          channel_types: "types" in value ? value.types : undefined,
-          min_value: "minValue" in value ? value.minValue : undefined,
-          max_value: "maxValue" in value ? value.maxValue : undefined,
-        })
-      ) as any,
-      default_permission: command.defaultPermission,
+      options: Object.entries(command.options ?? {}).map(([name, value]) => ({
+        type: value.type,
+        name,
+        description: value.description,
+        required: value.required ?? false,
+        ...("choices" in value ? { choices: value.choices } : {}),
+        ...("types" in value ? { channel_types: value.types } : {}),
+        ...("minValue" in value ? { min_value: value.minValue } : {}),
+        ...("maxValue" in value ? { max_value: value.maxValue } : {}),
+      })) as any,
+      default_permission: command.defaultPermission ?? true,
       type: ApplicationCommandType.ChatInput,
     }));
   }
 
   async overwriteCommands() {
-    await DiscordAPI.post(
+    await DiscordAPI.put(
       `/applications/${this.applicationID}/commands`,
       this.generateCommands(),
       {
@@ -368,7 +373,7 @@ class QuartzClient {
   }
 
   async overwriteGuildCommands(guildID: string) {
-    await DiscordAPI.post(
+    await DiscordAPI.put(
       `/applications/${this.applicationID}/guilds/${guildID}/commands`,
       this.generateCommands(),
       {
@@ -381,5 +386,4 @@ class QuartzClient {
 }
 
 export default QuartzClient;
-
 export * from "./commands";

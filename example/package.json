@@ -3,13 +3,19 @@
   "version": "0.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon src/index.ts"
+    "dev": "nodemon src/index.ts",
+    "push": "ts-node src/index.ts push",
+    "push:dev": "ts-node src/index.ts push 568191517907222541"
   },
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^17.0.0",
     "dotenv": "^10.0.0",
     "nodemon": "^2.0.15",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "@points.city/quartz": "../"
   }
 }
