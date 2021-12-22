@@ -6,13 +6,13 @@ import {
   APIInteractionDataResolvedGuildMember,
   APIUser,
   APIInteractionDataResolvedChannel,
-  APIInteractionGuildMember,
-  APIGuild,
   APIEmbed,
   AllowedMentionsTypes,
   APIMessage,
 } from "discord-api-types";
 import Guild from "./structures/Guild";
+import Member from "./structures/Member";
+import User from "./structures/User";
 
 export interface BaseCommandOption<T extends boolean> {
   description: string;
@@ -171,8 +171,8 @@ export interface HandlerContext<
   guildID?: string;
   channel: () => Promise<APIChannel>;
   guild: () => Promise<Guild | undefined>;
-  user?: APIUser;
-  member?: APIInteractionGuildMember;
+  user?: User;
+  member?: Member;
   send(options: SendOptions & { ephemeral?: boolean }): FollowUp;
   defer(ephemeral?: boolean): FollowUp;
 }

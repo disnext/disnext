@@ -21,11 +21,14 @@ import {
   InteractionResponseType,
   APIMessage,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
+  APIInteractionGuildMember,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
 import { DiscordAPI, streamToString } from "./util";
 import Guild from "./structures/Guild";
+import User from "./structures/User";
+import Member from "./structures/Member";
 
 class QuartzClient {
   applicationID: string;
@@ -116,9 +119,15 @@ class QuartzClient {
                   if (option.type === ApplicationCommandOptionType.User) {
                     const member = resolved?.members?.[option.value];
                     const user = resolved?.users?.[option.value];
-                    if (!member || !user)
+                    if (!member || !user || !interaction.guild_id)
                       throw new Error("Unable to resolve member");
-                    return [option.name, { ...member, user }];
+                    return [
+                      option.name,
+                      {
+                        ...new Member(member, interaction.guild_id),
+                        user: new User(user),
+                      },
+                    ];
                   } else if (
                     option.type === ApplicationCommandOptionType.Role
                   ) {
@@ -138,12 +147,18 @@ class QuartzClient {
                       resolved?.members?.[option.value] ??
                       resolved?.roles?.[option.value];
                     const user = resolved?.users?.[option.value];
-                    if (!mentionable)
+                    if (!mentionable || !interaction.guild_id)
                       throw new Error("Unable to resolve mentionable");
                     return [
                       option.name,
-                      resolved?.members?.[option.value]
-                        ? { ...mentionable, user }
+                      resolved?.members?.[option.value] && user
+                        ? {
+                            ...new Member(
+                              mentionable as APIInteractionGuildMember,
+                              interaction.guild_id
+                            ),
+                            user: new User(user),
+                          }
                         : mentionable,
                     ];
                   }
@@ -214,8 +229,11 @@ class QuartzClient {
             };
 
             const handlerContext = {
-              user: interaction.user,
-              member: interaction.member,
+              user: interaction.user ? new User(interaction.user) : undefined,
+              member:
+                interaction.member && interaction.guild_id
+                  ? new Member(interaction.member, interaction.guild_id)
+                  : undefined,
               channelID: interaction.channel_id,
               guildID: interaction.guild_id,
               name: interaction.data.name,
