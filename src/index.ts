@@ -333,11 +333,11 @@ class QuartzClient {
   }
 
   listen(port: number = 3000, address: string = "localhost") {
-    if (
-      process.argv[1] === "push" ||
-      (!!process.argv[2] && process.argv[2] === "push")
-    ) {
-      import("./cli").then((cli) => cli.loadCli(this));
+    if (process.argv.find((arg) => arg === "push")) {
+      import("./cli").then((cli) => cli.loadPush(this));
+      return;
+    } else if (process.argv.find((arg) => arg === "clear")) {
+      import("./cli").then((cli) => cli.loadClear(this));
       return;
     }
     http.createServer(this.handle).listen(port, address);
@@ -394,6 +394,26 @@ class QuartzClient {
     await DiscordAPI.put(
       `/applications/${this.applicationID}/guilds/${guildID}/commands`,
       this.generateCommands(),
+      {
+        headers: {
+          Authorization: `Bot ${this.token}`,
+        },
+      }
+    );
+  }
+
+  async clearCommands() {
+    await DiscordAPI.put(`/applications/${this.applicationID}/commands`, [], {
+      headers: {
+        Authorization: `Bot ${this.token}`,
+      },
+    });
+  }
+
+  async clearGuildCommands(guildID: string) {
+    await DiscordAPI.put(
+      `/applications/${this.applicationID}/guilds/${guildID}/commands`,
+      [],
       {
         headers: {
           Authorization: `Bot ${this.token}`,
