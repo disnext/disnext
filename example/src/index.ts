@@ -1,5 +1,5 @@
 import "dotenv/config";
-import QuartzClient, { options } from "@points.city/quartz";
+import QuartzClient, { ActionRow, Button, options } from "@points.city/quartz";
 
 const client: QuartzClient = new QuartzClient({
   applicationID: process.env.DISCORD_APPLICATION_ID!,
@@ -26,8 +26,25 @@ client.command({
     }),
   },
   handler: async (ctx) => {
+    await ctx.defer(true);
     const guild = await ctx.guild();
-    ctx.send({ content: `Ponging ${guild?.name}` });
+    await ctx.send({
+      content: `Ponging ${guild?.name}`,
+      components: [
+        new ActionRow().addButton(
+          new Button().setID("test").setLabel("test button")
+        ),
+      ],
+    });
+    await ctx.registerComponent({
+      id: "test",
+      handler: (btnCtx) => {
+        btnCtx.editParent({
+          content: "lmao",
+          components: [],
+        });
+      },
+    });
   },
 });
 

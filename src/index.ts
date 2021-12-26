@@ -1,13 +1,9 @@
 import http, { IncomingMessage, ServerResponse } from "http";
-import nacl from "tweetnacl";
-import { Readable } from "stream";
 import {
   Command,
   CommandOption,
-  FollowUp,
   inferMiddlewareContextTypes,
   MiddlewareFunction,
-  SendOptions,
 } from "./commands";
 import {
   APIPingInteraction,
@@ -15,25 +11,34 @@ import {
   APIMessageComponentInteraction,
   InteractionType,
   ApplicationCommandType,
-  ApplicationCommandOptionType,
-  APIChannel,
-  APIGuild,
-  InteractionResponseType,
-  APIMessage,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
-  APIInteractionGuildMember,
+  APIChatInputApplicationCommandInteraction,
 } from "discord-api-types";
 
 import { APIApplicationCommandAutocompleteInteraction } from "discord-api-types/payloads/v9/_interactions/autocomplete";
-import { DiscordAPI, streamToString } from "./util";
+import { DiscordAPI, streamToString, verify } from "./util";
 import Guild from "./structures/Guild";
 import User from "./structures/User";
 import Member from "./structures/Member";
+import ActionRow from "./structures/ActionRow";
+import Button from "./structures/Button";
+import SelectMenu from "./structures/SelectMenu";
+import Embed from "./structures/Embed";
+import ChatInputInteraction from "./structures/interactions/ChatInput";
+import MessageComponentInteraction from "./structures/interactions/MessageComponent";
 
 class QuartzClient {
   applicationID: string;
   publicKey: string;
   token: string;
+  components: Map<
+    string,
+    {
+      handler: (ctx: MessageComponentInteraction) => void;
+      expires: number;
+      expired?: () => void;
+    }
+  > = new Map();
   middlewares: MiddlewareFunction<any, any>[] = [];
   private commands: Command<
     Record<string, CommandOption<any>>,
@@ -56,29 +61,11 @@ class QuartzClient {
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse) {
-    const signature = req.headers["x-signature-ed25519"] as string | undefined;
-    const timestamp = req.headers["x-signature-timestamp"] as
-      | string
-      | undefined;
-
-    if (!signature || !timestamp) {
-      res.statusCode = 401;
-      res.end();
-      return;
-    }
-
     const data = await streamToString(req);
 
-    const isVerified = nacl.sign.detached.verify(
-      Buffer.from(timestamp + data),
-      Buffer.from(signature, "hex"),
-      Buffer.from(this.publicKey, "hex")
-    );
-
-    if (!isVerified) {
+    if (!verify(req.headers, data, this.publicKey)) {
       res.statusCode = 401;
-      res.end();
-      return;
+      return res.end();
     }
 
     const interaction = JSON.parse(data) as
@@ -98,8 +85,6 @@ class QuartzClient {
       case InteractionType.ApplicationCommand: {
         switch (interaction.data.type) {
           case ApplicationCommandType.ChatInput: {
-            const resolved = interaction.data.resolved;
-
             const command = this.commands.find(
               (c) => interaction.data.name === c.name
             );
@@ -110,196 +95,16 @@ class QuartzClient {
               return;
             }
 
-            const options = Object.fromEntries(
-              interaction.data.options?.map((option) => {
-                if (
-                  option.type !== ApplicationCommandOptionType.Subcommand &&
-                  option.type !== ApplicationCommandOptionType.SubcommandGroup
-                ) {
-                  if (option.type === ApplicationCommandOptionType.User) {
-                    const member = resolved?.members?.[option.value];
-                    const user = resolved?.users?.[option.value];
-                    if (!member || !user || !interaction.guild_id)
-                      throw new Error("Unable to resolve member");
-                    return [
-                      option.name,
-                      {
-                        ...new Member(member, interaction.guild_id),
-                        user: new User(user),
-                      },
-                    ];
-                  } else if (
-                    option.type === ApplicationCommandOptionType.Role
-                  ) {
-                    const role = resolved?.roles?.[option.value];
-                    if (!role) throw new Error("Unable to resolve role");
-                    return [option.name, role];
-                  } else if (
-                    option.type === ApplicationCommandOptionType.Channel
-                  ) {
-                    const channel = resolved?.channels?.[option.value];
-                    if (!channel) throw new Error("Unable to resolve channel");
-                    return [option.name, channel];
-                  } else if (
-                    option.type === ApplicationCommandOptionType.Mentionable
-                  ) {
-                    const mentionable =
-                      resolved?.members?.[option.value] ??
-                      resolved?.roles?.[option.value];
-                    const user = resolved?.users?.[option.value];
-                    if (!mentionable || !interaction.guild_id)
-                      throw new Error("Unable to resolve mentionable");
-                    return [
-                      option.name,
-                      resolved?.members?.[option.value] && user
-                        ? {
-                            ...new Member(
-                              mentionable as APIInteractionGuildMember,
-                              interaction.guild_id
-                            ),
-                            user: new User(user),
-                          }
-                        : mentionable,
-                    ];
-                  }
-                  return [option.name, option.value];
-                } else {
-                  return [option.name, option.options];
-                }
-              }) ?? []
+            const handlerContext = new ChatInputInteraction(
+              this,
+              interaction as APIChatInputApplicationCommandInteraction,
+              ({ code, body }) => {
+                res.statusCode = code;
+                res.setHeader("content-type", "application/json");
+                res.end(JSON.stringify(body));
+                return;
+              }
             );
-
-            let sent = false;
-
-            const followUp: FollowUp = {
-              send: async ({
-                allowedMentions,
-                ephemeral,
-                ...rest
-              }: SendOptions & { ephemeral?: boolean }) =>
-                (
-                  await DiscordAPI.post<APIMessage>(
-                    `/webhooks/${this.applicationID}/${interaction.token}`,
-                    {
-                      content: "content" in rest ? rest.content : undefined,
-                      embeds: "embeds" in rest ? rest.embeds : undefined,
-                      allowed_mentions: allowedMentions,
-                      flags: ephemeral ? 1 << 6 : undefined,
-                    },
-                    {
-                      headers: {
-                        Authorization: `Bot ${this.token}`,
-                      },
-                    }
-                  )
-                ).data,
-              delete: async (messageID?: string) => {
-                await DiscordAPI.delete(
-                  `/webhooks/${this.applicationID}/${
-                    interaction.token
-                  }/messages/${messageID ?? "@original"}`,
-                  {
-                    headers: {
-                      Authorization: `Bot ${this.token}`,
-                    },
-                  }
-                );
-              },
-              edit: async (
-                { allowedMentions, ...rest }: SendOptions,
-                messageID?: string
-              ) =>
-                (
-                  await DiscordAPI.patch<APIMessage>(
-                    `/webhooks/${this.applicationID}/${
-                      interaction.token
-                    }/messages/${messageID ?? "@original"}`,
-                    {
-                      content: "content" in rest ? rest.content : undefined,
-                      embeds: "embeds" in rest ? rest.embeds : undefined,
-                      allowed_mentions: allowedMentions,
-                    },
-                    {
-                      headers: {
-                        Authorization: `Bot ${this.token}`,
-                      },
-                    }
-                  )
-                ).data,
-            };
-
-            const handlerContext = {
-              user: interaction.user ? new User(interaction.user) : undefined,
-              member:
-                interaction.member && interaction.guild_id
-                  ? new Member(interaction.member, interaction.guild_id)
-                  : undefined,
-              channelID: interaction.channel_id,
-              guildID: interaction.guild_id,
-              name: interaction.data.name,
-              channel: async () =>
-                (
-                  await DiscordAPI.get<APIChannel>(
-                    `/channels/${interaction.channel_id}`,
-                    {
-                      headers: {
-                        Authorization: `Bot ${this.token}`,
-                      },
-                    }
-                  )
-                ).data,
-              guild: async () => {
-                if (!interaction.guild_id) return;
-                const rawGuild = (
-                  await DiscordAPI.get<APIGuild>(
-                    `/guilds/${interaction.guild_id}`,
-                    {
-                      headers: {
-                        Authorization: `Bot ${this.token}`,
-                      },
-                    }
-                  )
-                ).data;
-                if (!rawGuild) return;
-                return new Guild(rawGuild, this.token);
-              },
-              send: ({
-                allowedMentions,
-                ephemeral,
-                ...rest
-              }: SendOptions & { ephemeral?: boolean }) => {
-                if (sent)
-                  throw new Error("Cannot defer when response is already sent");
-                res.statusCode = 200;
-                res.setHeader("content-type", "application/json");
-                res.end(
-                  JSON.stringify({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                      content: "content" in rest ? rest.content : undefined,
-                      embeds: "embeds" in rest ? rest.embeds : undefined,
-                      allowed_mentions: allowedMentions,
-                      flags: ephemeral ? 1 << 6 : undefined,
-                    },
-                  })
-                );
-                sent = true;
-                return followUp;
-              },
-              defer: () => {
-                if (sent)
-                  throw new Error("Cannot defer when response is already sent");
-                res.statusCode = 200;
-                res.setHeader("content-type", "application/json");
-                res.end({
-                  type: InteractionResponseType.DeferredChannelMessageWithSource,
-                });
-                sent = true;
-                return followUp;
-              },
-              options,
-              context: {},
-            };
 
             for (const middleware of this.middlewares) {
               const res = await middleware(handlerContext);
@@ -309,7 +114,7 @@ class QuartzClient {
               handlerContext.context = res.ctx;
             }
 
-            command.handler(handlerContext);
+            command.handler(handlerContext as any);
 
             return;
           }
@@ -323,6 +128,25 @@ class QuartzClient {
       }
 
       case InteractionType.MessageComponent: {
+        if (
+          this.components.has(
+            `${interaction.message.id}-${interaction.data.custom_id}`
+          )
+        ) {
+          const handlerContext = new MessageComponentInteraction(
+            this,
+            interaction as APIMessageComponentInteraction,
+            ({ code, body }) => {
+              res.statusCode = code;
+              res.setHeader("content-type", "application/json");
+              res.end(JSON.stringify(body));
+              return;
+            }
+          );
+          return this.components
+            .get(`${interaction.message.id}-${interaction.data.custom_id}`)
+            ?.handler(handlerContext);
+        }
         return;
       }
 
@@ -425,3 +249,4 @@ class QuartzClient {
 
 export default QuartzClient;
 export * from "./commands";
+export { ActionRow, Button, SelectMenu, Guild, Member, User, Embed };

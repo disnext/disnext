@@ -10,7 +10,9 @@ import {
   AllowedMentionsTypes,
   APIMessage,
 } from "discord-api-types";
+import { ActionRow, Button, SelectMenu } from ".";
 import Guild from "./structures/Guild";
+import ChatInputInteraction from "./structures/interactions/ChatInput";
 import Member from "./structures/Member";
 import User from "./structures/User";
 
@@ -141,6 +143,7 @@ export type inferOptions<
 
 export interface BaseSendOptions {
   allowedMentions?: AllowedMentionsTypes;
+  components?: (ActionRow | Button | SelectMenu)[];
 }
 
 export type SendOptions = BaseSendOptions &
@@ -186,9 +189,10 @@ export type MiddlewareResponse<T extends object> =
       next: false;
     };
 
-export type MiddlewareFunction<T extends object, U extends object> = (
-  ctx: HandlerContext<undefined, T>
-) => Promise<MiddlewareResponse<U>>;
+export type MiddlewareFunction<
+  T extends Record<string, CommandOption<boolean>> | undefined,
+  U extends object
+> = (ctx: ChatInputInteraction<T, U>) => Promise<MiddlewareResponse<U>>;
 
 export type inferMiddlewareContextType<T extends MiddlewareFunction<any, any>> =
   T extends MiddlewareFunction<any, infer U> ? U : {};
@@ -196,6 +200,7 @@ export type inferMiddlewareContextType<T extends MiddlewareFunction<any, any>> =
 export type inferMiddlewareContextTypes<
   T extends MiddlewareFunction<any, any>[]
 > = inferMiddlewareContextType<T[number]>;
+
 export interface Command<
   T extends Record<string, CommandOption<boolean>> | undefined,
   U extends object
@@ -204,7 +209,7 @@ export interface Command<
   description: string;
   options?: T;
   defaultPermission?: boolean;
-  handler: (ctx: HandlerContext<T, U>) => void;
+  handler: (ctx: ChatInputInteraction<T, U>) => void;
 }
 
 export type constructMiddleware<T extends MiddlewareFunction<any, any>[]> = {
