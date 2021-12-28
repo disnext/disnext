@@ -63,7 +63,7 @@ class QuartzClient {
   private async handle(req: IncomingMessage, res: ServerResponse) {
     const data = await streamToString(req);
 
-    if (!verify(req.headers, data, this.publicKey)) {
+    if (!(await verify(req.headers, data, this.publicKey))) {
       res.statusCode = 401;
       return res.end();
     }
