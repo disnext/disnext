@@ -2,3 +2,4 @@ node_modules
 .env
 lib/
 dist/
+.DS_Store

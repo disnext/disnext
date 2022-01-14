@@ -192,7 +192,16 @@ class QuartzClient {
         name,
         description: value.description,
         required: value.required ?? false,
-        ...("choices" in value ? { choices: value.choices } : {}),
+        ...("choices" in value
+          ? {
+              choices: Object.entries(value.choices).map(
+                ([key, { value }]: any) => ({
+                  name: key,
+                  value,
+                })
+              ),
+            }
+          : {}),
         ...("types" in value ? { channel_types: value.types } : {}),
         ...("minValue" in value ? { min_value: value.minValue } : {}),
         ...("maxValue" in value ? { max_value: value.maxValue } : {}),

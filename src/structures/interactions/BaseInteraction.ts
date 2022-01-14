@@ -59,6 +59,14 @@ class BaseInteraction {
     return new Guild(rawGuild, this.client.token);
   }
 
+  get locale() {
+    return (
+      "guild_locale" in this.#data
+        ? (this.#data as any)?.guild_locale
+        : (this.#data as any).locale
+    ) as string;
+  }
+
   async channel() {
     (
       await DiscordAPI.get<APIChannel>(`/channels/${this.#data.channel_id}`, {
