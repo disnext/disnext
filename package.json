@@ -1,9 +1,9 @@
 {
-  "name": "@points.city/quartz",
+  "name": "@pointsbot/quartz",
   "version": "4.0.0",
   "description": "Quartz, reborn.",
   "main": "lib/index.js",
-  "repository": "https://github.com/pointscity/quartz",
+  "repository": "https://github.com/pointsbot/quartz",
   "author": "Innatical LLC",
   "bin": {
     "quartz": "lib/cli.js"
