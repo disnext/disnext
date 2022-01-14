@@ -31,6 +31,6 @@ jobs:
           run_install: true
 
       - run: pnpm build --if-present
-      - run: pnpm publish
+      - run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
