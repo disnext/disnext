@@ -3,6 +3,7 @@
   "version": "4.0.0",
   "description": "Quartz, reborn.",
   "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "repository": "https://github.com/pointsbot/quartz",
   "author": "Innatical LLC",
   "bin": {
