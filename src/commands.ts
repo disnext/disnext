@@ -102,13 +102,13 @@ export type inferBaseOption<T extends CommandOption<boolean>> =
     : T extends BooleanCommandOption<any>
     ? boolean
     : T extends UserCommandOption<any>
-    ? APIInteractionDataResolvedGuildMember & { user: APIUser }
+    ? Member & { user: User }
     : T extends ChannelCommandOption<any>
     ? APIInteractionDataResolvedChannel
     : T extends RoleCommandOption<any>
     ? APIRole
     : T extends MentionableCommandOption<any>
-    ? (APIInteractionDataResolvedGuildMember & { user: APIUser }) | APIRole
+    ? (Member & { user: User }) | APIRole
     : T extends NumberCommandOption<any, any>
     ? number
     : never;
