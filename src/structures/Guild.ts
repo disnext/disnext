@@ -1,12 +1,67 @@
-import { APIChannel, APIGuild, APIUser } from "discord-api-types";
+import {
+  APIChannel,
+  APIGuild,
+  APIGuildMember,
+  APIUser,
+} from "discord-api-types";
 import { DiscordAPI } from "../util";
 
+class Members {
+  #guildID: string;
+  constructor(guildID: string) {
+    this.#guildID = guildID;
+  }
+
+  async get(id: string) {
+    await DiscordAPI.get<APIGuildMember>(
+      `/guilds/${this.#guildID}/members/${id}`
+    );
+  }
+
+  async ban(
+    id: string,
+    {
+      reason,
+      deleteMessageDays,
+    }: {
+      reason?: string;
+      deleteMessageDays?: number;
+    }
+  ) {
+    let body: {
+      delete_message_days?: number;
+    } = {};
+
+    if (typeof deleteMessageDays === "number")
+      body.delete_message_days = deleteMessageDays;
+
+    await DiscordAPI.put(`/guilds/${this.#guildID}/bans/${id}`, body, {
+      headers: reason
+        ? {
+            "X-Audit-Log-Reason": reason,
+          }
+        : {},
+    });
+  }
+
+  async unban(id: string, reason?: string) {
+    await DiscordAPI.delete(`/guilds/${this.#guildID}/bans/${id}`, {
+      headers: reason
+        ? {
+            "X-Audit-Log-Reason": reason,
+          }
+        : {},
+    });
+  }
+}
 class Guild {
+  #members: Members;
   #guild: APIGuild;
   #token: string;
   constructor(guild: APIGuild, token: string) {
     this.#guild = guild;
     this.#token = token;
+    this.#members = new Members(guild.id);
   }
 
   get id() {
@@ -27,6 +82,10 @@ class Guild {
 
   get ownerID() {
     return this.#guild.owner_id;
+  }
+
+  get members() {
+    return this.#members;
   }
 
   async owner() {

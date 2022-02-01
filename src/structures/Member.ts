@@ -3,6 +3,7 @@ import {
   APIInteractionDataResolvedGuildMember,
   APIInteractionGuildMember,
 } from "discord-api-types";
+import { DiscordAPI } from "../util";
 import User from "./User";
 
 class Member {
@@ -88,9 +89,68 @@ class Member {
     return this.roles.find((role) => roles.includes(role));
   }
 
+  async timeout(timeout: number, reason?: string) {
+    await DiscordAPI.patch(
+      `/guilds/${this.#guildID}/members/${this.user?.id}`,
+      {
+        communication_disabled_until: Date.now() + timeout,
+      },
+      {
+        headers: reason
+          ? {
+              "X-Audit-Log-Reason": reason,
+            }
+          : {},
+      }
+    );
+  }
+
+  async ban(): Promise<void>;
+  async ban(deleteMessageDays: number): Promise<void>;
+  async ban(reason: string, deleteMessageDays?: number): Promise<void>;
+  async ban(
+    reasonOrDays?: string | number,
+    deleteMessageDays?: number
+  ): Promise<void> {
+    let body: {
+      delete_message_days?: number;
+    } = {};
+
+    if (typeof reasonOrDays === "number")
+      body.delete_message_days = reasonOrDays;
+    else if (typeof deleteMessageDays === "number")
+      body.delete_message_days = deleteMessageDays;
+
+    await DiscordAPI.put(
+      `/guilds/${this.#guildID}/bans/${this.user?.id}`,
+      body,
+      {
+        headers:
+          reasonOrDays && typeof reasonOrDays === "string"
+            ? {
+                "X-Audit-Log-Reason": reasonOrDays,
+              }
+            : {},
+      }
+    );
+  }
+
+  async kick(reason?: string): Promise<void> {
+    await DiscordAPI.delete(
+      `/guilds/${this.#guildID}/members/${this.user?.id}`,
+      {
+        headers: reason
+          ? {
+              "X-Audit-Log-Reason": reason,
+            }
+          : {},
+      }
+    );
+  }
+
   get communicationDisabledUntil() {
-    return "communication_disabled_until" in (this.#member as any)
-      ? ((this.#member as any).communication_disabled_until as string)
+    return "communication_disabled_until" in this.#member
+      ? this.#member.communication_disabled_until
       : undefined;
   }
 }
