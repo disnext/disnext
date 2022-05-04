@@ -1,10 +1,14 @@
-![](https://file.coffee/g5x8wAFT4.png)
+# disnext
 
-# Quartz
+What if discord bot development was actually easy? Welcome to disnext...
 
-The heart of [Points](https://points.bot)
+Disnext aims to get you started quickly with bot development without any cost of functionaility.
 
-## Setup
+## Get Started
 
-1.  Run `pnpm add @pointsbot/quartz`
-2.  View [example](https://github.com/pointsbot/quartz/tree/main/example) to get started
+Using our `create-quartz-app` tool, you can quickly get started with a full project setup.
+
+```zsh
+yarn global add create-quartz-app
+create-quartz-app
+```

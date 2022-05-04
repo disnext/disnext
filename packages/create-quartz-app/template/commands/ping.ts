@@ -1,18 +1,19 @@
-export const config = {
-  description: "Returns pong as a response",
-  locale: {
-    name: {
-      "en-US": "Ping",
-    },
-    description: {
-      "en-US": "Returns pong as a response",
-    },
+import { CommandLocale, CommandRun, CommandPermissions } from "disnext";
+
+export const description: string = "Returns pong as a response";
+export const locale: CommandLocale = {
+  name: {
+    "en-US": "Ping",
   },
-  permissions: {
-    dm: false,
+  description: {
+    "en-US": "Returns pong as a response",
   },
 };
 
-export const run = () => {
+export const permissions: CommandPermissions = {
+  dm: false,
+};
+
+export const run: CommandRun = () => {
   console.log("ha");
 };

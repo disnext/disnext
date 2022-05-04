@@ -108,10 +108,10 @@ const run = async () => {
     version: "0.0.0",
     private: true,
     scripts: {
-      dev: "quartz dev",
-      generate: "quartz generate",
-      build: "quartz build",
-      start: "quartz start",
+      dev: "disnext dev",
+      generate: "disnext generate",
+      build: "disnext build",
+      start: "disnext start",
     },
   };
 
@@ -120,7 +120,8 @@ const run = async () => {
     JSON.stringify(generatedPackageJson, null, 2) + os.EOL
   );
 
-  // const dependencies = ["@pointsbot/quartz"];
+  // Package not out yet, you have to install it manually
+  // const dependencies = ["disnext"];
 
   const devDependencies = ["typescript", "@types/node", "discord-api-types"];
 
