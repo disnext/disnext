@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./lib",
+    "module": "NodeNext"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["template"]
+}

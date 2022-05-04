@@ -1,0 +1,40 @@
+{
+  "name": "create-quartz-app",
+  "version": "0.0.1",
+  "description": "Create a new quartz app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pointsbot/quartz",
+    "directory": "packages/create-quartz-app"
+  },
+  "author": "Innatical, LLC. <contact@innatical.com>",
+  "license": "MIT",
+  "bin": {
+    "create-quartz-app": "./lib/index.js"
+  },
+  "files": [
+    "lib",
+    "template"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "@types/node": "^17.0.31",
+    "@types/prompts": "^2.0.14",
+    "@types/validate-npm-package-name": "^3.0.3",
+    "chalk": "^5.0.1",
+    "commander": "^9.2.0",
+    "cpy": "^9.0.1",
+    "prompts": "^2.4.2",
+    "typescript": "^4.7.0-beta",
+    "validate-npm-package-name": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.16"
+  }
+}

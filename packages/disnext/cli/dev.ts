@@ -1,0 +1,71 @@
+import { Command, program } from "commander";
+import dotenv from "dotenv";
+import path, { basename } from "node:path";
+import listen from "../server/index.js";
+import fs from "node:fs/promises";
+import chalk from "chalk";
+import util from "node:util";
+import * as fsWalk from "@nodelib/fs.walk";
+import type { Command as CommandType } from "../server/commands/command.js";
+import commands from "../server/commands/index.js";
+
+new Command("dev")
+  .option("-p, --port <port>", "Port to run the server on")
+  .option("--dir <directory>", "Project directory")
+  .parse(process.argv);
+
+const run = async () => {
+  const options = program.opts();
+  const dir = path.resolve(options.dir || ".");
+
+  if (!(await fs.stat(dir)).isDirectory()) {
+    console.error(`${chalk.red(`${dir} is not a directory`)}`);
+    process.exit(1);
+  }
+
+  dotenv.config({ path: path.join(dir, ".env") });
+
+  if (!process.env.QUARTZ_DISCORD_TOKEN) {
+    console.error('Missing "QUARTZ_DISCORD_TOKEN" in .env');
+    process.exit(1);
+  }
+
+  if (!process.env.QUARTZ_DISCORD_APPLICATION_ID) {
+    console.error('Missing "QUARTZ_DISCORD_APPLICATION_ID" in .env');
+    process.exit(1);
+  }
+
+  if (!process.env.QUARTZ_DISCORD_PUBLIC_KEY) {
+    console.error('Missing "QUARTZ_DISCORD_PUBLIC_KEY" in .env');
+    process.exit(1);
+  }
+
+  const port = Number(process.env.PORT || 3000);
+
+  const commandsDir = path.resolve(path.join(dir, "commands"));
+
+  if (!(await fs.stat(commandsDir)).isDirectory()) {
+    console.error(`${chalk.red(`${commandsDir} is not a directory`)}`);
+    process.exit(1);
+  }
+
+  const paths = await util.promisify(fsWalk.walk)(
+    path.join(__dirname, "commands")
+  );
+
+  for (const path of paths) {
+    if (path.path.endsWith(".js.map") || path.path.endsWith(".d.ts")) continue;
+    if (path.path.endsWith(".ts") || path.path.endsWith(".js")) {
+      const p: typeof CommandType = await import(path.path);
+      const cmdName = basename(
+        path.path,
+        path.path.endsWith(".js") ? ".js" : ".ts"
+      );
+      commands.add(cmdName, p);
+    }
+  }
+
+  listen(port);
+};
+
+run();
