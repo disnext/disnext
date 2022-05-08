@@ -1,9 +1,9 @@
-name: Push Release
+name: Push Canary Release
 on:
   push:
     branches: [main]
 jobs:
-  release-to-npm:
+  canary-release-to-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -29,3 +29,5 @@ jobs:
       - name: Publish to NPM
         run: |
           lerna publish --canary --yes
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
