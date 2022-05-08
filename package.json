@@ -1,6 +1,9 @@
 {
   "name": "disnext",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "lerna": "lerna",
     "build": "yarn prepublish",
