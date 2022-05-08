@@ -5,6 +5,9 @@ import fs from "node:fs/promises";
 import chalk from "chalk";
 import util from "node:util";
 import * as fsWalk from "@nodelib/fs.walk";
+import dotenv from "dotenv";
+import fetch from "node-fetch";
+import { Routes } from "discord-api-types/v10";
 
 const runGenerate = async () => {
   const options = program.opts();
@@ -12,6 +15,23 @@ const runGenerate = async () => {
 
   if (!(await fs.stat(dir)).isDirectory()) {
     console.error(`${chalk.red(`${dir} is not a directory`)}`);
+    process.exit(1);
+  }
+
+  dotenv.config({ path: path.join(dir, ".env") });
+
+  if (!process.env.QUARTZ_DISCORD_TOKEN) {
+    console.error('Missing "QUARTZ_DISCORD_TOKEN" in .env');
+    process.exit(1);
+  }
+
+  if (!process.env.QUARTZ_DISCORD_APPLICATION_ID) {
+    console.error('Missing "QUARTZ_DISCORD_APPLICATION_ID" in .env');
+    process.exit(1);
+  }
+
+  if (!process.env.QUARTZ_DISCORD_PUBLIC_KEY) {
+    console.error('Missing "QUARTZ_DISCORD_PUBLIC_KEY" in .env');
     process.exit(1);
   }
 
@@ -58,8 +78,15 @@ const runGenerate = async () => {
 
   const guildOnly = await prompts({
     type: "toggle",
-    name: "guild",
+    name: "guildOnly",
     message: "Is this command guild only?",
+    initial: false,
+  });
+
+  const pushCommand = await prompts({
+    type: "toggle",
+    name: "push",
+    message: "Should this command be pushed to discord?",
     initial: false,
   });
 
@@ -74,13 +101,58 @@ const runGenerate = async () => {
     process.exit(1);
   }
 
+  if (pushCommand.push) {
+    const pushGuild = await prompts({
+      type: "text",
+      name: "guild",
+      message: "What guild should this command be pushed to?",
+    });
+
+    if (!pushGuild.guild) {
+      await fetch(
+        Routes.applicationCommands(process.env.QUARTZ_DISCORD_APPLICATION_ID),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bot ${process.env.QUARTZ_DISCORD_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: commandName.name,
+            type: 1,
+            description: commandDescription.description,
+          }),
+        }
+      );
+    } else {
+      await fetch(
+        Routes.applicationGuildCommands(
+          process.env.QUARTZ_DISCORD_APPLICATION_ID,
+          pushGuild.guild
+        ),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bot ${process.env.QUARTZ_DISCORD_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: commandName.name,
+            type: 1,
+            description: commandDescription.description,
+          }),
+        }
+      );
+    }
+  }
+
   const writeTS = `
   import type { CommandLocale, CommandRun, CommandPermissions } from "disnext";
 
   export const description: string = "${commandDescription.description}";
 
   export const permissions: CommandPermissions = {
-    dm: ${guildOnly.guild ? "false" : "true"},
+    dm: ${guildOnly.guildOnly ? "false" : "true"},
   }
 
   export const run: CommandRun<typeof permissions> = async () => {

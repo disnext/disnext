@@ -1,4 +1,4 @@
-#!/usr/bin/env  node
+#!/usr/bin/env node
 import { Command } from "commander";
 import chalk from "chalk";
 import prompts from "prompts";
@@ -122,7 +122,11 @@ const run = async () => {
   // Package not out yet, you have to install it manually
   // const dependencies = ["disnext"];
 
-  const devDependencies = ["typescript", "@types/node", "discord-api-types"];
+  const devDependencies = [
+    "typescript@beta",
+    "@types/node",
+    "discord-api-types",
+  ];
 
   console.log();
   console.log("Installing packages. This might take a couple of minutes.");

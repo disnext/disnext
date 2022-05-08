@@ -1,4 +1,4 @@
-import { Command, program } from "commander";
+import { program } from "commander";
 import dotenv from "dotenv";
 import path, { basename } from "node:path";
 import listen from "../server/index.js";
