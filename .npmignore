@@ -1,7 +1,8 @@
 node_modules
 .cache
-dist
 .env
 example
 src
 tsconfig.json
+old
+README.md

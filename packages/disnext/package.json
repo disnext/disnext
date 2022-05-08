@@ -9,9 +9,6 @@
   },
   "author": "Innatical, LLC. <contact@innatical.com>",
   "license": "MIT",
-  "files": [
-    "lib"
-  ],
   "type": "module",
   "publishConfig": {
     "access": "public"

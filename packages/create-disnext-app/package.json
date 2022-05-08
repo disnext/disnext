@@ -12,10 +12,6 @@
   "bin": {
     "create-disnext-app": "./lib/index.js"
   },
-  "files": [
-    "lib",
-    "template"
-  ],
   "publishConfig": {
     "access": "public"
   },
