@@ -5,8 +5,6 @@ on:
 jobs:
   release-to-npm:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v3
@@ -19,6 +17,15 @@ jobs:
           git config --global user.name "ci@$GITHUB_ACTOR"
       - name: Install dependencies
         run: yarn install
+      - name: Authenticate with Registry
+        run: |
+          yarn logout
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
+          echo "always-auth=true" >> .npmrc
+          npm whoami
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to NPM
         run: |
           lerna publish --canary --yes

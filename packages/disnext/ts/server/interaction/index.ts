@@ -73,7 +73,7 @@ const handleInteractions = async (
     !(await verify(
       req.headers,
       ctx.data,
-      process.env.QUARTZ_DISCORD_PUBLIC_KEY!
+      process.env.DISNEXT_DISCORD_PUBLIC_KEY!
     ))
   ) {
     return ctx.reply(

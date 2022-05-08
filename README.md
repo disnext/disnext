@@ -6,9 +6,9 @@ Disnext aims to get you started quickly with bot development without any cost of
 
 ## Get Started
 
-Using our `create-quartz-app` tool, you can quickly get started with a full project setup.
+Using our `create-disnext-app` tool, you can quickly get started with a full project setup.
 
 ```zsh
-yarn global add create-quartz-app
-create-quartz-app
+yarn global add create-disnext-app
+create-disnext-app
 ```

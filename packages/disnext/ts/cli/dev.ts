@@ -22,18 +22,18 @@ const runDev = async () => {
 
   dotenv.config({ path: path.join(dir, ".env") });
 
-  if (!process.env.QUARTZ_DISCORD_TOKEN) {
-    console.error('Missing "QUARTZ_DISCORD_TOKEN" in .env');
+  if (!process.env.DISNEXT_DISCORD_TOKEN) {
+    console.error('Missing "DISNEXT_DISCORD_TOKEN" in .env');
     process.exit(1);
   }
 
-  if (!process.env.QUARTZ_DISCORD_APPLICATION_ID) {
-    console.error('Missing "QUARTZ_DISCORD_APPLICATION_ID" in .env');
+  if (!process.env.DISNEXT_DISCORD_APPLICATION_ID) {
+    console.error('Missing "DISNEXT_DISCORD_APPLICATION_ID" in .env');
     process.exit(1);
   }
 
-  if (!process.env.QUARTZ_DISCORD_PUBLIC_KEY) {
-    console.error('Missing "QUARTZ_DISCORD_PUBLIC_KEY" in .env');
+  if (!process.env.DISNEXT_DISCORD_PUBLIC_KEY) {
+    console.error('Missing "DISNEXT_DISCORD_PUBLIC_KEY" in .env');
     process.exit(1);
   }
 

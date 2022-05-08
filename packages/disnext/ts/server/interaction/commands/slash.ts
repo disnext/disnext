@@ -74,7 +74,7 @@ export class GuildSlashCommand extends SlashCommand {
       const response = await (
         await fetch(Routes.guild(this.#guild_id), {
           headers: {
-            Authorization: `Bot ${process.env.QUARTZ_DISCORD_TOKEN}`,
+            Authorization: `Bot ${process.env.DISNEXT_DISCORD_TOKEN}`,
           },
         })
       ).json();

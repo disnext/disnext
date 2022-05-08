@@ -120,7 +120,7 @@ const run = async () => {
   );
 
   // Package not out yet, you have to install it manually
-  // const dependencies = ["disnext"];
+  const dependencies = ["disnext"];
 
   const devDependencies = [
     "typescript@beta",
@@ -132,7 +132,7 @@ const run = async () => {
   console.log("Installing packages. This might take a couple of minutes.");
 
   // temp for adam's env testing
-  await install(resolvedProjectPath, ["../../quartz-reborn/packages/disnext"]);
+  await install(resolvedProjectPath, dependencies);
   await install(resolvedProjectPath, devDependencies, true);
 
   console.log(resolvedProjectPath, path.resolve(path.join(__dirname, "..")));

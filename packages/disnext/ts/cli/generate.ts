@@ -20,18 +20,18 @@ const runGenerate = async () => {
 
   dotenv.config({ path: path.join(dir, ".env") });
 
-  if (!process.env.QUARTZ_DISCORD_TOKEN) {
-    console.error('Missing "QUARTZ_DISCORD_TOKEN" in .env');
+  if (!process.env.DISNEXT_DISCORD_TOKEN) {
+    console.error('Missing "DISNEXT_DISCORD_TOKEN" in .env');
     process.exit(1);
   }
 
-  if (!process.env.QUARTZ_DISCORD_APPLICATION_ID) {
-    console.error('Missing "QUARTZ_DISCORD_APPLICATION_ID" in .env');
+  if (!process.env.DISNEXT_DISCORD_APPLICATION_ID) {
+    console.error('Missing "DISNEXT_DISCORD_APPLICATION_ID" in .env');
     process.exit(1);
   }
 
-  if (!process.env.QUARTZ_DISCORD_PUBLIC_KEY) {
-    console.error('Missing "QUARTZ_DISCORD_PUBLIC_KEY" in .env');
+  if (!process.env.DISNEXT_DISCORD_PUBLIC_KEY) {
+    console.error('Missing "DISNEXT_DISCORD_PUBLIC_KEY" in .env');
     process.exit(1);
   }
 
@@ -110,11 +110,11 @@ const runGenerate = async () => {
 
     if (!pushGuild.guild) {
       await fetch(
-        Routes.applicationCommands(process.env.QUARTZ_DISCORD_APPLICATION_ID),
+        Routes.applicationCommands(process.env.DISNEXT_DISCORD_APPLICATION_ID),
         {
           method: "POST",
           headers: {
-            Authorization: `Bot ${process.env.QUARTZ_DISCORD_TOKEN}`,
+            Authorization: `Bot ${process.env.DISNEXT_DISCORD_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -127,13 +127,13 @@ const runGenerate = async () => {
     } else {
       await fetch(
         Routes.applicationGuildCommands(
-          process.env.QUARTZ_DISCORD_APPLICATION_ID,
+          process.env.DISNEXT_DISCORD_APPLICATION_ID,
           pushGuild.guild
         ),
         {
           method: "POST",
           headers: {
-            Authorization: `Bot ${process.env.QUARTZ_DISCORD_TOKEN}`,
+            Authorization: `Bot ${process.env.DISNEXT_DISCORD_TOKEN}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
