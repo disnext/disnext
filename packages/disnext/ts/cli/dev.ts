@@ -8,13 +8,10 @@ import util from "node:util";
 import * as fsWalk from "@nodelib/fs.walk";
 import type { Command as CommandType } from "../server/commands/command.js";
 import commands from "../server/commands/index.js";
+import { fileURLToPath } from "node:url";
+import { register } from "ts-node";
 
-new Command("dev")
-  .option("-p, --port <port>", "Port to run the server on")
-  .option("--dir <directory>", "Project directory")
-  .parse(process.argv);
-
-const run = async () => {
+const runDev = async () => {
   const options = program.opts();
   const dir = path.resolve(options.dir || ".");
 
@@ -49,18 +46,21 @@ const run = async () => {
     process.exit(1);
   }
 
-  const paths = await util.promisify(fsWalk.walk)(
-    path.join(__dirname, "commands")
-  );
+  const paths = await util.promisify(fsWalk.walk)(commandsDir);
+
+  register({
+    esm: true,
+    cwd: dir,
+  });
 
   for (const path of paths) {
     if (path.path.endsWith(".js.map") || path.path.endsWith(".d.ts")) continue;
     if (path.path.endsWith(".ts") || path.path.endsWith(".js")) {
-      const p: typeof CommandType = await import(path.path);
       const cmdName = basename(
         path.path,
         path.path.endsWith(".js") ? ".js" : ".ts"
       );
+      const p: typeof CommandType = await import(path.path);
       commands.add(cmdName, p);
     }
   }
@@ -68,4 +68,4 @@ const run = async () => {
   listen(port);
 };
 
-run();
+runDev();

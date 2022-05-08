@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-
+#!/usr/bin/env  node
 import { Command } from "commander";
 import chalk from "chalk";
 import prompts from "prompts";
@@ -11,7 +10,6 @@ import { spawn } from "node:child_process";
 import cpy from "cpy";
 import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let appPath: string = "";
@@ -107,6 +105,7 @@ const run = async () => {
     name: appName,
     version: "0.0.0",
     private: true,
+    type: "module",
     scripts: {
       dev: "disnext dev",
       generate: "disnext generate",
@@ -128,7 +127,8 @@ const run = async () => {
   console.log();
   console.log("Installing packages. This might take a couple of minutes.");
 
-  // await install(resolvedProjectPath, dependencies);
+  // temp for adam's env testing
+  await install(resolvedProjectPath, ["../../quartz-reborn/packages/disnext"]);
   await install(resolvedProjectPath, devDependencies, true);
 
   console.log(resolvedProjectPath, path.resolve(path.join(__dirname, "..")));
@@ -136,15 +136,18 @@ const run = async () => {
   await cpy("template/**", resolvedProjectPath, {
     cwd: path.resolve(path.join(__dirname, "..")),
     rename: (name) => {
+      console.log(name);
       switch (name) {
         case "gitignore":
           return ".".concat(name);
-        case "README-template.md":
-          return "README.md";
+        case "tsconfig-template":
+          return "tsconfig";
+        case "README-template":
+          return "README";
         case "env":
           return ".env";
-        case "tsconfig-template.json":
-          return "tsconfig.json";
+        case "ping":
+          return "ping.ts";
         default:
           return name;
       }

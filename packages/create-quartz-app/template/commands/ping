@@ -1,4 +1,4 @@
-import { CommandLocale, CommandRun, CommandPermissions } from "disnext";
+import type { CommandLocale, CommandRun, CommandPermissions } from "disnext";
 
 export const description: string = "Returns pong as a response";
 export const locale: CommandLocale = {
@@ -14,6 +14,6 @@ export const permissions: CommandPermissions = {
   dm: false,
 };
 
-export const run: CommandRun = () => {
+export const run: CommandRun<typeof permissions> = () => {
   console.log("ha");
 };
