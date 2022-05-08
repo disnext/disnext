@@ -5,8 +5,14 @@ on:
 jobs:
   canary-release-to-npm:
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v3
         with:
           node-version: "16.x"
@@ -15,19 +21,11 @@ jobs:
         run: |
           git config --global user.email "ci@innatical.com"
           git config --global user.name "ci@$GITHUB_ACTOR"
+
+      - name: Verify NPM permissions
+        run: npm whoami
       - name: Install dependencies
         run: yarn install
-      - name: Authenticate with Registry
-        run: |
-          yarn logout
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> .npmrc
-          echo "registry=https://registry.npmjs.org/" >> .npmrc
-          echo "always-auth=true" >> .npmrc
-          npm whoami
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish to NPM
         run: |
-          lerna publish --canary --yes
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          lerna publish --canary --no-verify-access --yes
