@@ -25,7 +25,9 @@ jobs:
       - name: Verify NPM permissions
         run: npm whoami
       - name: Install dependencies
-        run: yarn install
+        run: yarn install\
+      - name: Build
+        run: yarn build
       - name: Publish to NPM
         run: |
           lerna publish --no-verify-access --yes

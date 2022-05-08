@@ -17,8 +17,12 @@
   },
   "type": "module",
   "scripts": {
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "prepublish": "tsc"
   },
+  "files": [
+    "lib"
+  ],
   "dependencies": {
     "@types/node": "^17.0.31",
     "@types/prompts": "^2.0.14",

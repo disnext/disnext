@@ -26,6 +26,8 @@ jobs:
         run: npm whoami
       - name: Install dependencies
         run: yarn install
+      - name: Build
+        run: yarn build
       - name: Publish to NPM
         run: |
           lerna publish --canary --no-verify-access --yes
